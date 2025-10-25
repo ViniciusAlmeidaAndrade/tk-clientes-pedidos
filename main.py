@@ -7,7 +7,8 @@ import db
 import utils
 import models
 from views.lista_cliente import ClientesView
-from views.form_clientes import FormCliente
+from views.form_cliente import FormCliente
+# --- ESTA É A LINHA QUE CORRIGE O ERRO ---
 from views.form_pedido import FormPedido
 
 
