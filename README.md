@@ -1,91 +1,129 @@
-Principais Funcionalidades
+# 🛒 Gestão de Clientes & Pedidos com Tkinter + IA 🤖
 
-Gestão de Clientes (CRUD):
+Este é um projeto de um sistema simples (CRUD) para gestão de clientes e seus respectivos pedidos, desenvolvido em Python com a biblioteca Tkinter para a interface gráfica e SQLite para a persistência de dados.
 
-Listar, buscar (por nome/email), criar, editar e excluir clientes.
+O projeto foi desenvolvido como uma atividade acadêmica, com o objetivo de praticar a modelagem de entidades, construção de GUIs, persistência de dados e o uso responsável de assistentes de IA para acelerar o desenvolvimento e prototipação.
 
-Validação de formulário (nome obrigatório, formato de e-mail, dígitos de telefone).
+---
 
-Gestão de Pedidos:
+## ✅ Funcionalidades Principais
 
-Listar pedidos existentes (com nome do cliente).
+* **Clientes:** CRUD completo para o cadastro de clientes.
+* **Produtos:** CRUD completo para um catálogo de produtos reutilizáveis (Nome e Preço).
+* **Pedidos:** Criação de pedidos selecionando produtos de um catálogo, com cálculo automático do total.
+* **Busca:** Filtro de clientes e produtos por nome.
+* **Persistência:** Todos os dados são salvos em um banco de dados SQLite local.
+* **UX:** Interface gráfica intuitiva com validações e mensagens de confirmação/erro.
+---
 
-Criar novos pedidos associados a um cliente.
+## 🏗️ Arquitetura do Projeto
 
-Adicionar/Remover múltiplos itens (produto, quantidade, preço) em um pedido.
+O projeto segue uma estrutura modular para separar responsabilidades, facilitando a manutenção e a legibilidade do código.
 
-Cálculo automático do total do pedido.
-
-Banco de Dados:
-
-Salvamento transacional (garante que um pedido e todos os seus itens sejam salvos juntos, ou nada é salvo).
-
-Uso de Chaves Estrangeiras (FOREIGN KEY) para garantir a integridade (impede a exclusão de clientes com pedidos).
-
-Experiência do Usuário (UX):
-
-Mensagens de erro, sucesso e confirmação amigáveis (messagebox).
-
-Prevenção de perda de dados (pergunta ao usuário se deseja salvar antes de fechar uma janela com dados alterados).
-
-Logging simples de erros e informações no console (utils.py).
-
-Arquitetura do Projeto
-
-O projeto está estruturado da seguinte forma:
-
+```text
 tk-clientes-pedidos/
-├── main.py           # Ponto de entrada, controlador principal (AppController)
-├── db.py             # Funções de inicialização e acesso ao DB (SQLite)
-├── models.py         # Classes de dados (dataclasses: Cliente, Pedido, ItemPedido)
-├── utils.py          # Funções utilitárias (ex: logging)
-├── views/
-│   ├── lista_cliente.py # View (Frame) da lista de clientes (ClientesView)
-│   ├── form_clientes.py # View (Toplevel) do formulário de cliente (FormCliente)
-│   └── form_pedido.py   # View (Toplevel) do formulário de pedido (FormPedido)
-├── pedidos_app.db    # (Gerado automaticamente ao executar)
-└── README.md         # Este arquivo
+├── .gitignore          # Configuração para ignorar arquivos e pastas (como .venv, .idea)
+├── .venv/              # Pasta do ambiente virtual (ignorada pelo Git)
+├── app_database.db     # Arquivo do banco de dados (ignorado pelo Git)
+├── db.py               # Módulo para interações com o banco de dados (SQLite)
+├── main.py             # Ponto de entrada da aplicação (Controlador Principal)
+├── models.py           # Definição das estruturas de dados (dataclasses)
+├── README.md           # Documentação do projeto
+├── requirements.txt    # Lista de dependências (vazio, usa apenas bibliotecas padrão)
+├── utils.py            # Funções utilitárias (ex: logs)
+└── views/              # Pacote com os módulos da interface gráfica (GUI)
+    ├── __init__.py     # Inicializador do pacote 'views'
+    ├── form_cliente.py # Janela de formulário para criar/editar clientes
+    ├── form_pedido.py  # Janela de formulário para criar pedidos
+    └── lista_cliente.py# Frame que exibe a lista de clientes
+```
+---
 
+## 🚀 Como Rodar o Projeto
 
-Como Executar
+### Pré-requisitos
+* **Python 3.10+**
 
-Pré-requisitos
+Nenhuma biblioteca externa é necessária, pois o projeto utiliza apenas a biblioteca padrão do Python (Tkinter, SQLite3, etc.).
 
-Python 3.x (versão 3.7 ou superior recomendada).
+### Passos para Execução
+1.  **Clone o repositório:**
+    ```bash
+    git clone [https://github.com/seu-usuario/tk-clientes-pedidos.git](https://github.com/seu-usuario/tk-clientes-pedidos.git)
+    ```
 
-Não são necessárias bibliotecas externas! O projeto utiliza apenas a biblioteca padrão do Python (tkinter, sqlite3, re, datetime, os, sys).
+2.  **Navegue até a pasta do projeto:**
+    ```bash
+    cd tk-clientes-pedidos
+    ```
 
-Passos para Execução
+3.  **(Opcional, mas recomendado) Crie e ative um ambiente virtual:**
+    ```bash
+    # Windows
+    python -m venv .venv
+    .\.venv\Scripts\activate
 
-Clone ou baixe este repositório para o seu computador.
+    # macOS / Linux
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
 
-Abra um terminal ou prompt de comando.
+4.  **Execute a aplicação:**
+    ```bash
+    python main.py
+    ```
+    > ℹ️ Ao ser executado pela primeira vez, o arquivo `app_database.db` será criado automaticamente na raiz do projeto.
 
-Navegue até o diretório raiz do projeto (a pasta tk-clientes-pedidos/ que contém o main.py).
+---
 
-Execute o aplicativo:
+## 📖 Como Usar a Aplicação
 
-python main.py
+Para criar um pedido, siga o fluxo de trabalho abaixo:
 
+1.  **📦 Cadastre os Produtos:** Vá para a aba **"Produtos"** e adicione os itens que você vende ao catálogo.
+2.  **👤 Cadastre os Clientes:** Na aba **"Clientes"**, adicione um ou mais clientes.
+3.  **🛒 Crie um Pedido:** Com clientes e produtos já cadastrados, vá para a aba **"Pedidos"**, clique em "Novo Pedido", selecione o cliente e adicione itens do seu catálogo ao pedido.
 
-A aplicação será iniciada, e o arquivo de banco de dados pedidos_app.db será criado automaticamente no mesmo diretório.
+---
+## 🧠 Registro de IA
 
-Histórico de Prompts (Desenvolvimento)
+Este projeto foi desenvolvido com o auxílio de um assistente de IA para gerar código base, explicar conceitos e refinar funcionalidades. Abaixo estão os principais prompts utilizados no processo.
 
-Este aplicativo foi construído iterativamente usando os seguintes comandos principais:
+### Prompt 1 — Modelagem e DB 📊
+> “Crie, para um app Tkinter, o esquema de SQLite com tabelas clientes (id, nome, email, telefone) e pedidos (id, cliente_id, data, total) e itens_pedido (id, pedido_id, produto, quantidade, preco_unit). Gere funções Python em db.py para inicializar o banco e executar comandos parametrizados com tratamento de erros.”
 
-Criação do Banco de Dados: "Crie, para um app Tkinter, o esquema de SQLite com tabelas clientes (...) e pedidos (...) e itens_pedido (...). Gere funções Python em db.py para inicializar o banco e executar comandos parametrizados com tratamento de erros."
+---
 
-Formulário de Cliente: "Gere um formulário Tkinter (janela Toplevel) para cadastrar/editar Clientes com campos nome, e-mail e telefone. Valide: nome obrigatório, e-mail em formato simples, telefone com 8–15 dígitos. Inclua botões Salvar/Cancelar e callbacks separados."
+### Prompt 2 — Formulário de Cliente 📝
+> “Gere um formulário Tkinter (janela Toplevel) para cadastrar/editar Clientes com campos nome, e-mail e telefone. Valide: nome obrigatório, e-mail em formato simples, telefone com 8–15 dígitos. Inclua botões Salvar/Cancelar e callbacks separados.”
 
-Lista de Clientes: "Crie um frame Tkinter com Treeview para listar clientes, com barra de busca por nome/email e botões Novo/Editar/Excluir. Ao excluir, peça confirmação. Recarregue a lista após operações."
+---
 
-Formulário de Pedido: "Implemente uma janela Tkinter para criar Pedido: selecione Cliente (Combobox), campo Data (hoje por padrão), tabela de itens (produto/quantidade/preço), botões Adicionar/Remover item e cálculo automático do total. Salve em pedidos e itens_pedido de forma transacional."
+### Prompt 3 — Lista de Clientes com busca 🔍
+> “Crie um frame Tkinter com Treeview para listar clientes, com barra de busca por nome/email e botões Novo/Editar/Excluir. Ao excluir, peça confirmação. Recarregue a lista após operações.”
 
-Melhorias de UX e Logging: "Melhore UX do app: mensagens amigáveis (messagebox), validações com feedback, prevenção de fechar janela com dados não salvos, e try/except com logs simples (crie utils.py)."
+---
 
-Criação dos Modelos: "Gostaria de criar um models.py (para desacoplar a lógica usando dataclasses)."
+### Prompt 4 — Pedido com itens 📦
+> “Implemente uma janela Tkinter para criar Pedido: selecione Cliente (Combobox), campo Data (hoje por padrão), tabela de itens (produto/quantidade/preço), botões Adicionar/Remover item e cálculo automático do total. Salve em pedidos e itens_pedido de forma transacional.”
 
-Criação do Controlador Principal: "Agora crie um main.py para min (para conectar todas as views, modelos e o banco de dados)."
+---
 
-Criação do README: "Quero que crie um readme explicando como rodar e com os principais prompts usados."
+### Prompt 5 — Extensão com Catálogo de Produtos 🧩
+> > “Implemente uma nova funcionalidade no sistema. Quero uma lista de produtos onde possam ser adicionados e excluídos, e que no pedido o usuário apenas escolha o produto.
+---
+
+### Prompt 6 — UX e validações 🛡️
+> “Melhore UX do app: mensagens amigáveis (messagebox), validações com feedback, prevenção de fechar janela com dados não salvos, e try/except com logs simples.”
+
+---
+
+### Prompts Adicionais de Estrutura 🧩
+> "Gostaria de criar um models.py (para desacoplar a lógica usando dataclasses)."
+> "Agora crie um main.py para mim (para conectar todas as views, modelos e o banco de dados)."
+> "Quero que crie um readme explicando como rodar e com os principais prompts usados."
+
+---
+
+### Prompt Final — Refinamento do README ✨
+> "Melhore visualmente o readme com emoji e bem divididos, e faça como .md"

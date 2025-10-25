@@ -8,8 +8,10 @@ import utils
 import models
 from views.lista_cliente import ClientesView
 from views.form_cliente import FormCliente
-# --- ESTA É A LINHA QUE CORRIGE O ERRO ---
 from views.form_pedido import FormPedido
+# NOVOS IMPORTS PARA PRODUTOS
+from views.lista_produto import ProdutosView
+from views.form_produto import FormProduto
 
 
 class AppController:
@@ -24,10 +26,8 @@ class AppController:
         self.root.title("Gestão de Clientes e Pedidos")
         self.root.geometry("900x600")
 
-        # Centraliza a janela
         self.root.eval('tk::PlaceWindow . center')
 
-        # Inicializa o banco de dados
         try:
             db.inicializar_banco()
             utils.log_info("Aplicação iniciada. Banco de dados inicializado.")
@@ -38,12 +38,10 @@ class AppController:
             self.root.destroy()
             return
 
-        # --- Cria a Estrutura Principal (Abas) ---
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # --- Aba 1: Clientes ---
-        # Instancia a View de Clientes e passa os callbacks
         self.clientes_view = ClientesView(
             self.notebook,
             on_novo=self._on_novo_cliente,
@@ -53,27 +51,33 @@ class AppController:
         )
         self.notebook.add(self.clientes_view, text="Clientes")
 
-        # --- Aba 2: Pedidos ---
-        # Como não temos um 'pedidos_view.py' complexo, criamos a
-        # visualização de pedidos aqui mesmo.
+        # --- Aba 2: Produtos (NOVA ABA) ---
+        self.produtos_view = ProdutosView(
+            self.notebook,
+            on_novo=self._on_novo_produto,
+            on_editar=self._on_editar_produto,
+            on_excluir=self._on_excluir_produto,
+            on_buscar=self._on_buscar_produto
+        )
+        self.notebook.add(self.produtos_view, text="Produtos")
+
+        # --- Aba 3: Pedidos ---
         self.pedidos_frame = self._criar_aba_pedidos(self.notebook)
         self.notebook.add(self.pedidos_frame, text="Pedidos")
 
         # --- Carregamento Inicial ---
         self.recarregar_lista_clientes()
+        self.recarregar_lista_produtos()  # Carrega os produtos
         self.recarregar_lista_pedidos()
 
     def _criar_aba_pedidos(self, parent):
-        """Cria o conteúdo da aba de Pedidos."""
         frame = ttk.Frame(parent)
 
-        # Botão
         btn_frame = ttk.Frame(frame, padding=10)
         btn_frame.pack(side=tk.TOP, fill=tk.X)
         btn_novo = ttk.Button(btn_frame, text="Novo Pedido", command=self._on_novo_pedido)
         btn_novo.pack(side=tk.LEFT)
 
-        # Treeview (Lista de Pedidos)
         tree_frame = ttk.Frame(frame, padding=(10, 0, 10, 10))
         tree_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
@@ -92,7 +96,6 @@ class AppController:
 
         scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.pedidos_tree.yview)
         self.pedidos_tree.configure(yscrollcommand=scrollbar.set)
-
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.pedidos_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -103,10 +106,6 @@ class AppController:
     # =================================================================
 
     def recarregar_lista_clientes(self, termo_busca=None):
-        """
-        Busca clientes no banco e atualiza a 'ClientesView'.
-        Usa o model 'Cliente' para converter as tuplas.
-        """
         utils.log_info(f"Recarregando lista de clientes. Termo: '{termo_busca}'")
         try:
             if termo_busca:
@@ -117,198 +116,194 @@ class AppController:
                 params = ()
 
             tuplas_clientes = db.executar_comando(sql, params)
-
-            # Converte as tuplas do DB em objetos Cliente (do models.py)
             clientes_obj = [models.Cliente.from_tuple(t) for t in tuplas_clientes]
-
-            # Converte os objetos em tuplas para a View
             dados_para_view = [(c.id, c.nome, c.email, c.telefone) for c in clientes_obj]
-
-            # Chama o método público da View
             self.clientes_view.set_lista_clientes(dados_para_view)
-
         except Exception as e:
             utils.log_erro("Falha ao recarregar lista de clientes.", e)
             messagebox.showerror("Erro de Banco", f"Não foi possível carregar os clientes: {e}")
 
     def _on_buscar_cliente(self, termo: str):
-        """Callback do botão 'Buscar' da ClientesView."""
         self.recarregar_lista_clientes(termo)
 
     def _on_novo_cliente(self):
-        """Callback do botão 'Novo' da ClientesView."""
-        utils.log_info("Abrindo formulário de novo cliente.")
-        # Abre o formulário modal
-        # Passamos os callbacks que o formulário deve chamar
-        FormCliente(
-            self.root,
-            on_save_callback=self._salvar_cliente_cb,
-            on_cancel_callback=self._cancelar_form_cb
-        )
+        FormCliente(self.root, on_save_callback=self._salvar_cliente_cb, on_cancel_callback=self._cancelar_form_cb)
 
     def _on_editar_cliente(self, cliente_id: int):
-        """Callback do botão 'Editar' da ClientesView."""
-        utils.log_info(f"Abrindo formulário para editar cliente ID: {cliente_id}")
         try:
-            # 1. Buscar os dados atuais do cliente no DB
             tupla = db.executar_comando("SELECT * FROM clientes WHERE id=?", (cliente_id,))
             if not tupla:
                 messagebox.showerror("Erro", "Cliente não encontrado.", parent=self.root)
                 return
-
-            # 2. Converter a tupla em objeto (models.py)
             cliente_obj = models.Cliente.from_tuple(tupla[0])
-
-            # 3. Converter o objeto em dicionário para o formulário
-            dados_cliente_dict = {
-                "id": cliente_obj.id,
-                "nome": cliente_obj.nome,
-                "email": cliente_obj.email,
-                "telefone": cliente_obj.telefone
-            }
-
-            # 4. Abrir o formulário com os dados
-            FormCliente(
-                self.root,
-                on_save_callback=self._salvar_cliente_cb,
-                on_cancel_callback=self._cancelar_form_cb,
-                cliente_data=dados_cliente_dict
-            )
+            dados_cliente_dict = {"id": cliente_obj.id, "nome": cliente_obj.nome, "email": cliente_obj.email,
+                                  "telefone": cliente_obj.telefone}
+            FormCliente(self.root, on_save_callback=self._salvar_cliente_cb, on_cancel_callback=self._cancelar_form_cb,
+                        cliente_data=dados_cliente_dict)
         except Exception as e:
             utils.log_erro(f"Falha ao carregar cliente ID {cliente_id} para edição.", e)
             messagebox.showerror("Erro", f"Não foi possível carregar os dados do cliente: {e}")
 
     def _on_excluir_cliente(self, cliente_id: int):
-        """Callback do botão 'Excluir' da ClientesView."""
-        utils.log_info(f"Tentativa de exclusão do cliente ID: {cliente_id}")
         try:
-            # Tenta excluir
             db.executar_comando("DELETE FROM clientes WHERE id=?", (cliente_id,))
-
-            # Se bem-sucedido:
-            utils.log_info(f"Cliente ID: {cliente_id} excluído com sucesso.")
             messagebox.showinfo("Sucesso", "Cliente excluído com sucesso.", parent=self.root)
             self.recarregar_lista_clientes()
-
         except sqlite3.Error as e:
-            # Erro de integridade (FOREIGN KEY) é o mais comum
             if "FOREIGN KEY" in str(e):
-                utils.log_erro(f"Falha ao excluir cliente ID {cliente_id} (Foreign Key).", e)
-                messagebox.showerror(
-                    "Erro de Exclusão",
-                    "Não é possível excluir este cliente, pois ele já possui pedidos cadastrados.\n\n"
-                    "Dica: Exclua os pedidos deste cliente primeiro.",
-                    parent=self.root
-                )
+                messagebox.showerror("Erro de Exclusão",
+                                     "Não é possível excluir este cliente, pois ele já possui pedidos cadastrados.",
+                                     parent=self.root)
             else:
-                utils.log_erro(f"Falha ao excluir cliente ID {cliente_id}.", e)
                 messagebox.showerror("Erro de Banco", f"Falha ao excluir cliente: {e}", parent=self.root)
 
     def _salvar_cliente_cb(self, dados_cliente: dict):
-        """
-        Callback que o 'FormCliente' chama ao clicar em 'Salvar'.
-        Recebe um dicionário com os dados validados.
-        """
         try:
-            # Converte o dicionário em um objeto Cliente (models.py)
-            cliente_obj = models.Cliente(**dados_cliente)
-
-            if cliente_obj.id:
-                # --- UPDATE (Edição) ---
-                utils.log_info(f"Atualizando cliente ID: {cliente_obj.id}")
+            if dados_cliente.get('id'):
                 sql = "UPDATE clientes SET nome=?, email=?, telefone=? WHERE id=?"
-                params = (cliente_obj.nome, cliente_obj.email, cliente_obj.telefone, cliente_obj.id)
+                params = (dados_cliente['nome'], dados_cliente['email'], dados_cliente['telefone'], dados_cliente['id'])
                 msg_sucesso = "Cliente atualizado com sucesso!"
             else:
-                # --- INSERT (Novo) ---
-                utils.log_info("Salvando novo cliente.")
                 sql = "INSERT INTO clientes (nome, email, telefone) VALUES (?, ?, ?)"
-                params = (cliente_obj.nome, cliente_obj.email, cliente_obj.telefone)
+                params = (dados_cliente['nome'], dados_cliente['email'], dados_cliente['telefone'])
                 msg_sucesso = "Cliente salvo com sucesso!"
 
             db.executar_comando(sql, params)
-
             messagebox.showinfo("Sucesso", msg_sucesso, parent=self.root)
             self.recarregar_lista_clientes()
-
         except sqlite3.Error as e:
-            utils.log_erro("Falha ao salvar cliente no banco.", e)
             messagebox.showerror("Erro no Banco", f"Não foi possível salvar o cliente: {e}", parent=self.root)
 
     def _cancelar_form_cb(self):
-        """Callback que o 'FormCliente' chama ao fechar/cancelar."""
         utils.log_info("Formulário de cliente fechado sem salvar.")
+
+    # =================================================================
+    # --- LÓGICA DE PRODUTOS (CALLBACKS) ---
+    # =================================================================
+
+    def recarregar_lista_produtos(self, termo_busca=None):
+        utils.log_info(f"Recarregando lista de produtos. Termo: '{termo_busca}'")
+        try:
+            if termo_busca:
+                sql = "SELECT * FROM produtos WHERE nome LIKE ? ORDER BY nome"
+                params = (f"%{termo_busca}%",)
+            else:
+                sql = "SELECT * FROM produtos ORDER BY nome"
+                params = ()
+
+            lista_produtos = db.executar_comando(sql, params)
+            self.produtos_view.set_lista_produtos(lista_produtos)
+        except Exception as e:
+            utils.log_erro("Falha ao recarregar lista de produtos.", e)
+            messagebox.showerror("Erro de Banco", f"Não foi possível carregar os produtos: {e}")
+
+    def _on_buscar_produto(self, termo: str):
+        self.recarregar_lista_produtos(termo)
+
+    def _on_novo_produto(self):
+        FormProduto(self.root, on_save_callback=self._salvar_produto_cb)
+
+    def _on_editar_produto(self, produto_id: int):
+        try:
+            tupla = db.executar_comando("SELECT * FROM produtos WHERE id=?", (produto_id,))
+            if not tupla:
+                messagebox.showerror("Erro", "Produto não encontrado.", parent=self.root)
+                return
+            produto_data = {"id": tupla[0][0], "nome": tupla[0][1], "preco": tupla[0][2]}
+            FormProduto(self.root, on_save_callback=self._salvar_produto_cb, produto_data=produto_data)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível carregar os dados do produto: {e}")
+
+    def _on_excluir_produto(self, produto_id: int):
+        try:
+            db.executar_comando("DELETE FROM produtos WHERE id=?", (produto_id,))
+            messagebox.showinfo("Sucesso", "Produto excluído com sucesso.", parent=self.root)
+            self.recarregar_lista_produtos()
+        except Exception as e:
+            if "FOREIGN KEY" in str(e):
+                messagebox.showerror("Erro de Exclusão",
+                                     "Não é possível excluir este produto, pois ele já está associado a um ou mais pedidos.",
+                                     parent=self.root)
+            else:
+                messagebox.showerror("Erro de Banco", f"Falha ao excluir produto: {e}", parent=self.root)
+
+    def _salvar_produto_cb(self, dados_produto: dict):
+        try:
+            if dados_produto.get('id'):
+                sql = "UPDATE produtos SET nome=?, preco=? WHERE id=?"
+                params = (dados_produto['nome'], dados_produto['preco'], dados_produto['id'])
+                msg_sucesso = "Produto atualizado com sucesso!"
+            else:
+                sql = "INSERT INTO produtos (nome, preco) VALUES (?, ?)"
+                params = (dados_produto['nome'], dados_produto['preco'])
+                msg_sucesso = "Produto salvo com sucesso!"
+
+            db.executar_comando(sql, params)
+            messagebox.showinfo("Sucesso", msg_sucesso, parent=self.root)
+            self.recarregar_lista_produtos()
+        except Exception as e:
+            if "UNIQUE constraint failed" in str(e):
+                messagebox.showerror("Erro ao Salvar",
+                                     f"Já existe um produto com o nome '{dados_produto['nome']}'.\n\nPor favor, escolha um nome diferente.",
+                                     parent=self.root)
+            else:
+                messagebox.showerror("Erro no Banco", f"Não foi possível salvar o produto: {e}", parent=self.root)
 
     # =================================================================
     # --- LÓGICA DE PEDIDOS (CALLBACKS) ---
     # =================================================================
 
     def recarregar_lista_pedidos(self):
-        """Busca pedidos (com JOIN) e atualiza o Treeview de pedidos."""
         utils.log_info("Recarregando lista de pedidos.")
         try:
-            # SQL com JOIN para pegar o nome do cliente
             sql = """
             SELECT p.id, p.data, c.nome, p.total
             FROM pedidos p
             JOIN clientes c ON p.cliente_id = c.id
             ORDER BY p.data DESC, p.id DESC
             """
-
             lista_pedidos = db.executar_comando(sql)
-
-            # Limpa a árvore
             for i in self.pedidos_tree.get_children():
                 self.pedidos_tree.delete(i)
-
-            # Insere os novos dados
             for item in lista_pedidos:
-                # Formata o total para R$
                 total_formatado = f"{item[3]:.2f}"
                 dados_view = (item[0], item[1], item[2], total_formatado)
                 self.pedidos_tree.insert("", tk.END, values=dados_view)
-
         except Exception as e:
             utils.log_erro("Falha ao recarregar lista de pedidos.", e)
             messagebox.showerror("Erro de Banco", f"Não foi possível carregar os pedidos: {e}")
 
     def _on_novo_pedido(self):
-        """Callback do botão 'Novo Pedido'."""
         utils.log_info("Abrindo formulário de novo pedido.")
         try:
-            # 1. Precisamos da lista de clientes para o Combobox
+            # 1. Verifica se existem clientes
             tuplas_clientes = db.executar_comando("SELECT id, nome FROM clientes ORDER BY nome")
-
             if not tuplas_clientes:
-                messagebox.showwarning(
-                    "Atenção",
-                    "Não é possível criar um pedido pois não há clientes cadastrados.\n\n"
-                    "Por favor, cadastre um cliente primeiro.",
-                    parent=self.root
-                )
-                self.notebook.select(self.clientes_view)  # Muda para a aba de clientes
+                messagebox.showwarning("Atenção", "Cadastre um cliente antes de criar um pedido.", parent=self.root)
+                self.notebook.select(self.clientes_view)
                 return
 
-            # 2. Abrir o formulário de pedido
+            # 2. VERIFICA SE EXISTEM PRODUTOS (NOVA VALIDAÇÃO)
+            tuplas_produtos = db.executar_comando("SELECT id, nome, preco FROM produtos ORDER BY nome")
+            if not tuplas_produtos:
+                messagebox.showwarning("Atenção", "Cadastre um produto antes de criar um pedido.", parent=self.root)
+                self.notebook.select(self.produtos_view)
+                return
+
+            # 3. Abrir o formulário de pedido, passando ambas as listas
             FormPedido(
                 self.root,
                 lista_clientes=tuplas_clientes,
+                lista_produtos=tuplas_produtos,  # Passa a lista de produtos
                 on_save_success_callback=self._on_pedido_salvo_cb
             )
-
         except Exception as e:
             utils.log_erro("Falha ao preparar formulário de novo pedido.", e)
             messagebox.showerror("Erro", f"Não foi possível abrir o formulário: {e}")
 
     def _on_pedido_salvo_cb(self):
-        """
-        Callback que o 'FormPedido' chama após salvar com sucesso.
-        O formulário já fez a transação do DB, só precisamos atualizar a lista.
-        """
         utils.log_info("Callback de pedido salvo recebido. Atualizando listas.")
         self.recarregar_lista_pedidos()
-        # (Opcional) Podemos ter que recarregar clientes se houver lógica de exclusão
-        # self.recarregar_lista_clientes()
 
 
 # =================================================================
@@ -318,19 +313,16 @@ class AppController:
 if __name__ == "__main__":
     try:
         root = tk.Tk()
-
-        # Define um tema 'clam' ou 'default' para melhor aparência
         style = ttk.Style()
         try:
             style.theme_use('clam')
         except tk.TclError:
-            style.theme_use('default')  # Fallback
+            style.theme_use('default')
 
         app = AppController(root)
         root.mainloop()
     except Exception as e:
         utils.log_erro("Erro fatal na aplicação.", e)
-        # Tenta mostrar um messagebox se o tkinter ainda funcionar
         try:
             messagebox.showerror("Erro Fatal", f"Ocorreu um erro inesperado: {e}\nConsulte os logs.")
         except:
