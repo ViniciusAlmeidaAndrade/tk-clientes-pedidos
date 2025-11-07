@@ -1,6 +1,16 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3  # Para tratar erros específicos do DB
+import os  # Para abrir arquivos
+import sys  # Para verificar o S.O.
+import subprocess  # Para abrir arquivos
+import csv  # Para exportar CSV
+
+# Imports de PDF (ReportLab)
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 
 # Importações dos nossos módulos
 import db
@@ -12,6 +22,9 @@ from views.form_pedido import FormPedido
 # NOVOS IMPORTS PARA PRODUTOS
 from views.lista_produto import ProdutosView
 from views.form_produto import FormProduto
+from views.dashboard_view import DashboardView
+# NOVO IMPORT DE RELATÓRIOS
+from views.relatorios_view import RelatoriosView
 
 
 class AppController:
@@ -25,7 +38,6 @@ class AppController:
         self.root = root
         self.root.title("Gestão de Clientes e Pedidos")
         self.root.geometry("900x600")
-
         self.root.eval('tk::PlaceWindow . center')
 
         try:
@@ -41,7 +53,14 @@ class AppController:
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # --- Aba 1: Clientes ---
+        # Aba 1: Dashboard
+        self.dashboard_view = DashboardView(
+            self.notebook,
+            on_atualizar_callback=self.recarregar_dashboard  # Conecta o botão ao callback
+        )
+        self.notebook.add(self.dashboard_view, text="Dashboard")
+
+        # Aba 2: Clientes
         self.clientes_view = ClientesView(
             self.notebook,
             on_novo=self._on_novo_cliente,
@@ -51,7 +70,7 @@ class AppController:
         )
         self.notebook.add(self.clientes_view, text="Clientes")
 
-        # --- Aba 2: Produtos (NOVA ABA) ---
+        # Aba 3: Produtos
         self.produtos_view = ProdutosView(
             self.notebook,
             on_novo=self._on_novo_produto,
@@ -61,14 +80,25 @@ class AppController:
         )
         self.notebook.add(self.produtos_view, text="Produtos")
 
-        # --- Aba 3: Pedidos ---
+        # Aba 4: Pedidos
         self.pedidos_frame = self._criar_aba_pedidos(self.notebook)
         self.notebook.add(self.pedidos_frame, text="Pedidos")
 
+        # --- NOVA ABA 5: Relatórios ---
+        self.relatorios_view = RelatoriosView(
+            self.notebook,
+            on_filtrar_callback=self._on_filtrar_relatorio,
+            on_exportar_csv_callback=self._on_exportar_csv,
+            on_exportar_pdf_callback=self._on_exportar_pdf
+        )
+        self.notebook.add(self.relatorios_view, text="Relatórios")
+
         # --- Carregamento Inicial ---
+        self.recarregar_dashboard()
         self.recarregar_lista_clientes()
         self.recarregar_lista_produtos()  # Carrega os produtos
         self.recarregar_lista_pedidos()
+        self._carregar_dados_relatorios()  # Carrega dados da nova aba
 
     def _criar_aba_pedidos(self, parent):
         frame = ttk.Frame(parent)
@@ -100,6 +130,37 @@ class AppController:
         self.pedidos_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         return frame
+
+    # =================================================================
+    # --- LÓGICA DO DASHBOARD (NOVA SEÇÃO) ---
+    # =================================================================
+
+    def recarregar_dashboard(self):
+        """
+        Busca os dados agregados do models e atualiza a dashboard_view.
+        """
+        utils.log_info("Recarregando dados do dashboard.")
+        try:
+            # 1. Busca os dados (assume que models.fetch_dados_dashboard() existe)
+            total_clientes, total_pedidos, ticket_medio = models.fetch_dados_dashboard()
+
+            # 2. Atualiza a view
+            self.dashboard_view.set_dados(total_clientes, total_pedidos, ticket_medio)
+
+            # 3. Exibe mensagem amigável
+            messagebox.showinfo(
+                "Atualização Concluída",
+                "Os dados do dashboard foram atualizados com sucesso!",
+                parent=self.root  # Mostra o messagebox sobre a janela principal
+            )
+
+        except Exception as e:
+            utils.log_erro("Falha ao recarregar o dashboard.", e)
+            messagebox.showerror(
+                "Erro de Atualização",
+                f"Ocorreu um erro ao buscar os dados do dashboard:\n{e}",
+                parent=self.root
+            )
 
     # =================================================================
     # --- LÓGICA DE CLIENTES (CALLBACKS) ---
@@ -305,10 +366,171 @@ class AppController:
         utils.log_info("Callback de pedido salvo recebido. Atualizando listas.")
         self.recarregar_lista_pedidos()
 
+    # =================================================================
+    # --- LÓGICA DE RELATÓRIOS (NOVA SEÇÃO) ---
+    # =================================================================
 
-# =================================================================
-# --- PONTO DE ENTRADA DA APLICAÇÃO ---
-# =================================================================
+    def _carregar_dados_relatorios(self):
+        """Carrega os dados iniciais para a aba de relatórios."""
+        try:
+            # 1. Carrega clientes no Combobox
+            clientes_list = models.fetch_clientes_para_combobox()
+            self.relatorios_view.set_clientes_combobox(clientes_list)
+
+            # 2. Executa o filtro inicial (sem filtros)
+            self._on_filtrar_relatorio()
+
+        except Exception as e:
+            utils.log_erro("Falha ao carregar dados iniciais dos relatórios.", e)
+            messagebox.showerror("Erro", f"Não foi possível carregar a aba de relatórios: {e}", parent=self.root)
+
+    def _on_filtrar_relatorio(self):
+        """Callback do botão 'Filtrar' da aba de relatórios."""
+        try:
+            utils.log_info("Filtrando relatório de pedidos.")
+            # 1. Pega os valores dos filtros da view
+            filtros = self.relatorios_view.get_filtros()
+
+            # 2. Busca os dados no model
+            pedidos = models.fetch_relatorio_pedidos(
+                filtros["data_inicio"],
+                filtros["data_fim"],
+                filtros["cliente_id"]
+            )
+
+            # 3. Atualiza a treeview na view
+            self.relatorios_view.set_lista_pedidos(pedidos)
+
+        except Exception as e:
+            utils.log_erro("Falha ao filtrar relatório.", e)
+            messagebox.showerror("Erro ao Filtrar", f"Ocorreu um erro ao buscar os dados:\n{e}", parent=self.root)
+
+    def _on_exportar_csv(self):
+        """Exporta os dados filtrados para um arquivo CSV."""
+        filepath = "relatorio_pedidos.csv"
+        utils.log_info(f"Exportando relatório para CSV: {filepath}")
+
+        try:
+            # 1. Busca os dados atuais (com os filtros aplicados)
+            filtros = self.relatorios_view.get_filtros()
+            dados = models.fetch_relatorio_pedidos(
+                filtros["data_inicio"],
+                filtros["data_fim"],
+                filtros["cliente_id"]
+            )
+
+            # 2. Escreve o arquivo CSV
+            with open(filepath, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+
+                # Cabeçalho
+                writer.writerow(['ID Pedido', 'Data', 'Cliente', 'Nº Itens', 'Total (R$)'])
+
+                # Dados (formatando o total)
+                for row in dados:
+                    # (id, data, cliente, itens, total)
+                    row_formatada = [row[0], row[1], row[2], row[3], f"{row[4]:.2f}"]
+                    writer.writerow(row_formatada)
+
+            messagebox.showinfo("Exportação Concluída",
+                                f"Relatório salvo com sucesso em:\n{os.path.abspath(filepath)}",
+                                parent=self.root)
+
+            # 3. Abre o arquivo
+            self._abrir_arquivo(filepath)
+
+        except Exception as e:
+            utils.log_erro(f"Falha ao exportar CSV: {filepath}", e)
+            messagebox.showerror("Erro ao Exportar", f"Não foi possível gerar o CSV:\n{e}", parent=self.root)
+
+    def _on_exportar_pdf(self):
+        """Exporta os dados filtrados para um arquivo PDF."""
+        filepath = "relatorio_pedidos.pdf"
+        utils.log_info(f"Exportando relatório para PDF: {filepath}")
+
+        try:
+            # 1. Busca os dados
+            filtros = self.relatorios_view.get_filtros()
+            dados = models.fetch_relatorio_pedidos(
+                filtros["data_inicio"],
+                filtros["data_fim"],
+                filtros["cliente_id"]
+            )
+
+            # 2. Configura o Documento PDF (em paisagem)
+            doc = SimpleDocTemplate(filepath, pagesize=landscape(A4))
+            elements = []
+
+            # 3. Prepara os dados para a tabela
+            # Cabeçalho
+            dados_tabela = [['ID', 'Data', 'Cliente', 'Nº Itens', 'Total (R$)']]
+            # Adiciona os dados formatados
+            for row in dados:
+                # (id, data, cliente, itens, total)
+                dados_tabela.append([
+                    row[0],
+                    row[1],
+                    row[2],
+                    row[3],
+                    f"R$ {row[4]:.2f}"
+                ])
+
+            # 4. Cria a Tabela e aplica estilos
+            t = Table(dados_tabela, colWidths=[0.8 * inch, 1.2 * inch, None, 0.8 * inch, 1.2 * inch])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                # Alinha a última coluna (Total) à direita
+                ('ALIGN', (4, 1), (4, -1), 'RIGHT'),
+                # Alinha o Cliente à esquerda
+                ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+                ('PADDINGLEFT', (2, 1), (2, -1), 5),
+                ('PADDINGRIGHT', (4, 1), (4, -1), 5),
+            ]))
+
+            elements.append(t)
+
+            # 5. Gera (Build) o PDF
+            doc.build(elements)
+
+            messagebox.showinfo("Exportação Concluída",
+                                f"Relatório salvo com sucesso em:\n{os.path.abspath(filepath)}",
+                                parent=self.root)
+
+            # 6. Abre o arquivo
+            self._abrir_arquivo(filepath)
+
+        except Exception as e:
+            utils.log_erro(f"Falha ao exportar PDF: {filepath}", e)
+            messagebox.showerror("Erro ao Exportar", f"Não foi possível gerar o PDF:\n{e}", parent=self.root)
+
+    def _abrir_arquivo(self, filepath):
+        """Helper para abrir um arquivo no visualizador padrão do S.O."""
+        try:
+            # Converte para caminho absoluto
+            path = os.path.abspath(filepath)
+
+            if sys.platform == "win32":
+                os.startfile(path)
+            elif sys.platform == "darwin":  # macOS
+                subprocess.run(["open", path])
+            else:  # linux
+                subprocess.run(["xdg-open", path])
+            utils.log_info(f"Solicitando abertura do arquivo: {path}")
+        except Exception as e:
+            utils.log_erro(f"Não foi possível abrir o arquivo {path}", e)
+            messagebox.showerror("Erro", f"Não foi possível abrir o arquivo automaticamente:\n{e}", parent=self.root)
+
+    # =================================================================
+    # --- PONTO DE ENTRADA DA APLICAÇÃO ---
+    # =================================================================
+
 
 if __name__ == "__main__":
     try:
