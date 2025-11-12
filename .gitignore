@@ -1,5 +1,10 @@
 venv/
 __pycache__/
-.db
+logs/
+*.log
+app_database.db
+*.db
 .ideia/
 .env
+relatorio_pedidos.csv
+*.csv
