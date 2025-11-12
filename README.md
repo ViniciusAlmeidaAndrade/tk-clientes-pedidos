@@ -1,41 +1,61 @@
 # 🛒 Gestão de Clientes & Pedidos com Tkinter + IA 🤖
 
-Este é um projeto de um sistema simples (CRUD) para gestão de clientes e seus respectivos pedidos, desenvolvido em Python com a biblioteca Tkinter para a interface gráfica e SQLite para a persistência de dados.
+Este é um projeto de um sistema de gestão (CRUD) para clientes e pedidos, desenvolvido em Python com a biblioteca Tkinter para a interface gráfica e SQLite para a persistência de dados.
 
-O projeto foi desenvolvido como uma atividade acadêmica, com o objetivo de praticar a modelagem de entidades, construção de GUIs, persistência de dados e o uso responsável de assistentes de IA para acelerar o desenvolvimento e prototipação.
+O projeto evoluiu para incluir um dashboard de métricas, relatórios em PDF/CSV, um log de auditoria e integração com a API Google Gemini para análise de dados.
 
 ---
 
 ## ✅ Funcionalidades Principais
 
-* **Clientes:** CRUD completo para o cadastro de clientes.
-* **Produtos:** CRUD completo para um catálogo de produtos reutilizáveis (Nome e Preço).
-* **Pedidos:** Criação de pedidos selecionando produtos de um catálogo, com cálculo automático do total.
-* **Busca:** Filtro de clientes e produtos por nome.
-* **Persistência:** Todos os dados são salvos em um banco de dados SQLite local.
-* **UX:** Interface gráfica intuitiva com validações e mensagens de confirmação/erro.
+* **Dashboard:** Uma tela inicial com métricas de negócios (KPIs) como total de clientes, pedidos no mês e ticket médio.
+* **Análise com IA:** Um botão no dashboard que utiliza a API Google Gemini para analisar os últimos 5 pedidos e fornecer insights acionáveis (ex: produtos mais vendidos, média de valor).
+* **CRUDs Completos:**
+    * **Clientes:** Cadastro, edição, exclusão e busca.
+    * **Produtos:** Gerenciamento de um catálogo de produtos reutilizáveis.
+* **Criação de Pedidos:** Um formulário que seleciona clientes e produtos do catálogo para criar novos pedidos, calculando o total automaticamente.
+* **Relatórios:** Uma aba dedicada para filtrar pedidos por período (data) e por cliente, com opções de exportação para **CSV** e **PDF**.
+* **Histórico (Log de Auditoria):**
+    * Registra automaticamente todas as ações de criação, edição e exclusão em um arquivo `logs/app.log`.
+    * Exibe esse histórico em uma tela própria com opção de limpeza.
+* **Temas:** Um menu de opções permite alternar a interface entre **Tema Claro** e **Tema Escuro** em tempo real.
+* **Navegação:** Interface moderna com abas e uma barra de menu superior para navegação rápida.
+* **Persistência:** Todos os dados são salvos em um banco de dados SQLite local (`app_database.db`).
+
 ---
 
 ## 🏗️ Arquitetura do Projeto
 
-O projeto segue uma estrutura modular para separar responsabilidades, facilitando a manutenção e a legibilidade do código.
+O projeto segue uma estrutura modular para separar a Interface (Views), a Lógica de Negócios (Core) e os Dados (Models/DB).
 
 ```text
 tk-clientes-pedidos/
-├── .gitignore          # Configuração para ignorar arquivos e pastas (como .venv, .idea)
-├── .venv/              # Pasta do ambiente virtual (ignorada pelo Git)
-├── app_database.db     # Arquivo do banco de dados (ignorado pelo Git)
-├── db.py               # Módulo para interações com o banco de dados (SQLite)
-├── main.py             # Ponto de entrada da aplicação (Controlador Principal)
-├── models.py           # Definição das estruturas de dados (dataclasses)
-├── README.md           # Documentação do projeto
-├── requirements.txt    # Lista de dependências (vazio, usa apenas bibliotecas padrão)
-├── utils.py            # Funções utilitárias (ex: logs)
-└── views/              # Pacote com os módulos da interface gráfica (GUI)
-    ├── __init__.py     # Inicializador do pacote 'views'
-    ├── form_cliente.py # Janela de formulário para criar/editar clientes
-    ├── form_pedido.py  # Janela de formulário para criar pedidos
-    └── lista_cliente.py# Frame que exibe a lista de clientes
+├── .venv/                  # Ambiente virtual
+├── core/                   # Lógica de negócios
+│   ├──__init__.py
+|   ├── analysis.py         # Lógica de integração com API (Gemini)
+│   └── database.py         # Funções de consulta ao banco (SELECTs)
+├── logs/                   # Logs de auditoria
+│   └── app.log
+├── views/                  # Pacote com os módulos da UI (Telas)
+│   ├── __init__.py
+│   ├── dashboard_view.py
+│   ├── form_cliente.py
+│   ├── form_pedido.py
+│   ├── form_produto.py
+│   ├── historico_view.py
+│   ├── lista_cliente.py
+│   ├── lista_produto.py
+│   └── relatorios_view.py
+├── .env                    # Arquivo de chave de API (Ignorado pelo Git)
+├── .gitignore
+├── app_database.db         # Banco de dados (Ignorado pelo Git)
+├── db.py                   # Funções de baixo-nível do SQLite (Init, C/U/D)
+├── main.py                 # Ponto de entrada (AppController principal)
+├── models.py               # Definição das Dataclasses (estruturas)
+├── README.md               # Este arquivo
+├── requirements.txt        # Lista de dependências do projeto
+└── styles.py               # Definições dos temas Claro/Escuro
 ```
 ---
 
@@ -43,21 +63,16 @@ tk-clientes-pedidos/
 
 ### Pré-requisitos
 * **Python 3.10+**
-
-Nenhuma biblioteca externa é necessária, pois o projeto utiliza apenas a biblioteca padrão do Python (Tkinter, SQLite3, etc.).
+* Uma chave de API do **Google AI Studio** (para a funcionalidade de IA).
 
 ### Passos para Execução
 1.  **Clone o repositório:**
     ```bash
-    git clone [https://github.com/seu-usuario/tk-clientes-pedidos.git](https://github.com/seu-usuario/tk-clientes-pedidos.git)
-    ```
-
-2.  **Navegue até a pasta do projeto:**
-    ```bash
+    git clone [URL-DO-SEU-REPOSITORIO]
     cd tk-clientes-pedidos
     ```
 
-3.  **(Opcional, mas recomendado) Crie e ative um ambiente virtual:**
+2.  **Crie e ative um ambiente virtual:**
     ```bash
     # Windows
     python -m venv .venv
@@ -68,62 +83,65 @@ Nenhuma biblioteca externa é necessária, pois o projeto utiliza apenas a bibli
     source .venv/bin/activate
     ```
 
-4.  **Execute a aplicação:**
+3.  **Instale as dependências:**
+    O projeto agora usa bibliotecas externas. Instale-as com:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Configure a Chave de API (Obrigatório para IA):**
+    * Crie um arquivo chamado `.env` na pasta raiz do projeto.
+    * Abra o arquivo e adicione sua chave de API do Google AI Studio:
+        ```
+        GOOGLE_API_KEY=SUA_CHAVE_DE_API_AIza...
+        ```
+
+5.  **Execute a aplicação:**
     ```bash
     python main.py
     ```
-    > ℹ️ Ao ser executado pela primeira vez, o arquivo `app_database.db` será criado automaticamente na raiz do projeto.
+    > ℹ️ Ao ser executado pela primeira vez, o arquivo `app_database.db` e a pasta `logs/` serão criados automaticamente.
 
 ---
 
-## 📖 Como Usar a Aplicação
-
-Para criar um pedido, siga o fluxo de trabalho abaixo:
-
-1.  **📦 Cadastre os Produtos:** Vá para a aba **"Produtos"** e adicione os itens que você vende ao catálogo.
-2.  **👤 Cadastre os Clientes:** Na aba **"Clientes"**, adicione um ou mais clientes.
-3.  **🛒 Crie um Pedido:** Com clientes e produtos já cadastrados, vá para a aba **"Pedidos"**, clique em "Novo Pedido", selecione o cliente e adicione itens do seu catálogo ao pedido.
-
----
 ## 🧠 Registro de IA
 
-Este projeto foi desenvolvido com o auxílio de um assistente de IA para gerar código base, explicar conceitos e refinar funcionalidades. Abaixo estão os principais prompts utilizados no processo.
+Este projeto foi desenvolvido com o auxílio de um assistente de IA. Abaixo estão os principais prompts utilizados no processo.
 
 ### Prompt 1 — Modelagem e DB 📊
-> “Crie, para um app Tkinter, o esquema de SQLite com tabelas clientes (id, nome, email, telefone) e pedidos (id, cliente_id, data, total) e itens_pedido (id, pedido_id, produto, quantidade, preco_unit). Gere funções Python em db.py para inicializar o banco e executar comandos parametrizados com tratamento de erros.”
+> “Crie, para um app Tkinter, o esquema de SQLite com tabelas clientes, pedidos e itens_pedido. Gere funções Python em db.py para inicializar o banco e executar comandos parametrizados...”
 
+### Prompt 2 — Formulário e Lista de Clientes 📝
+> “Gere um formulário Tkinter (Toplevel) para cadastrar/editar Clientes... Crie um frame Tkinter com Treeview para listar clientes, com barra de busca por nome/email e botões Novo/Editar/Excluir.”
+
+### Prompt 3 — Pedido com Itens 📦
+> “Implemente uma janela Tkinter para criar Pedido: selecione Cliente (Combobox), campo Data, tabela de itens (produto/quantidade/preço), botões Adicionar/Remover item e cálculo automático do total...”
+
+### Prompt 4 — Dashboard de Métricas 📈
+> “Crie uma tela inicial (Dashboard) que exiba: total de clientes, total de pedidos no mês, e ticket médio. Use consultas SQLite agregadas e widgets Label...”
+
+### Prompt 5 — Relatórios com Filtro e Exportação 📄
+> “Implemente uma janela ‘Relatórios’ com filtros por data inicial/final e cliente (Combobox). Liste os pedidos filtrados em uma Treeview. Adicione botões para Exportar CSV e Exportar PDF (usando reportlab)...”
+
+### Prompt 6 — Análise com IA (Gemini) 🤖
+> “Adicione botão ‘Analisar Pedidos’ que lê os 5 últimos pedidos do banco, gera um resumo textual e envia via API para o Google Gemini. Mostre o resultado em Text widget com rolagem.”
+
+**Prompt enviado para o Gemini (registrado conforme solicitado):**
+```
+Você é um assistente de análise de vendas para um pequeno negócio.
+Analise os dados brutos dos últimos 5 pedidos fornecidos a seguir e retorne um resumo em português brasileiro com insights acionáveis.
+Formate sua resposta em 3 a 5 tópicos curtos (bullet points).
+[...]
+Responda APENAS com os insights.
 ---
-
-### Prompt 2 — Formulário de Cliente 📝
-> “Gere um formulário Tkinter (janela Toplevel) para cadastrar/editar Clientes com campos nome, e-mail e telefone. Valide: nome obrigatório, e-mail em formato simples, telefone com 8–15 dígitos. Inclua botões Salvar/Cancelar e callbacks separados.”
-
+[DADOS DOS PEDIDOS]
+{dados_formatados}
 ---
+[/DADOS DOS PEDIDOS]
+```
 
-### Prompt 3 — Lista de Clientes com busca 🔍
-> “Crie um frame Tkinter com Treeview para listar clientes, com barra de busca por nome/email e botões Novo/Editar/Excluir. Ao excluir, peça confirmação. Recarregue a lista após operações.”
+### Prompt 7 — Log de Auditoria (Histórico) 🔍
+> “Adicione registro automático de ações (Criar, Editar, Excluir Cliente/Pedido) em logs/app.log com timestamp. Crie janela ‘Histórico’ que lê esse arquivo e exibe os eventos em Listbox. Inclua botão ‘Limpar Histórico’...”
 
----
-
-### Prompt 4 — Pedido com itens 📦
-> “Implemente uma janela Tkinter para criar Pedido: selecione Cliente (Combobox), campo Data (hoje por padrão), tabela de itens (produto/quantidade/preço), botões Adicionar/Remover item e cálculo automático do total. Salve em pedidos e itens_pedido de forma transacional.”
-
----
-
-### Prompt 5 — Extensão com Catálogo de Produtos 🧩
-> > “Implemente uma nova funcionalidade no sistema. Quero uma lista de produtos onde possam ser adicionados e excluídos, e que no pedido o usuário apenas escolha o produto.
----
-
-### Prompt 6 — UX e validações 🛡️
-> “Melhore UX do app: mensagens amigáveis (messagebox), validações com feedback, prevenção de fechar janela com dados não salvos, e try/except com logs simples.”
-
----
-
-### Prompts Adicionais de Estrutura 🧩
-> "Gostaria de criar um models.py (para desacoplar a lógica usando dataclasses)."
-> "Agora crie um main.py para mim (para conectar todas as views, modelos e o banco de dados)."
-> "Quero que crie um readme explicando como rodar e com os principais prompts usados."
-
----
-
-### Prompt Final — Refinamento do README ✨
-> "Melhore visualmente o readme com emoji e bem divididos, e faça como .md"
+### Prompt 8 — Menu Principal e Temas 🎨
+> “Implemente menu principal (Menu bar) com opções: Clientes, Pedidos, Sair, etc. Bloqueie fechamento com confirmação, e permita alternar tema claro/escuro via ttk.Style().”
