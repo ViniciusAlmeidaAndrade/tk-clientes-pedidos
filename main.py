@@ -604,9 +604,9 @@ class AppController:
     def _on_limpar_historico(self):
         utils.log_info("Usuário solicitou limpeza do histórico.")
         if messagebox.askyesno("Confirmar Limpeza",
-                               "Tem certeza que deseja apagar permanentemente todo o histórico de ações?\n\nEsta ação não pode ser desfeita.",
-                               parent=self.root,
-                               icon='warning'):
+                                "Tem certeza que deseja apagar permanentemente todo o histórico de ações?\n\nEsta ação não pode ser desfeita.",
+                                parent=self.root,
+                                icon='warning'):
             try:
                 utils.log_acao("Ação: Limpeza do histórico SOLICITADA.")
                 utils.limpar_log()
@@ -617,6 +617,25 @@ class AppController:
                 messagebox.showerror("Erro", f"Não foi possível limpar o histórico:\n{e}", parent=self.root)
         else:
             utils.log_info("Limpeza do histórico CANCELADA pelo usuário.")
+
+    def _toggle_theme(self):
+        self.theme_is_light = not self.theme_is_light
+        try:
+            if self.theme_is_light:
+                styles.apply_light_theme(self.style)
+                utils.log_info("Tema alterado para: Claro")
+            else:
+                styles.apply_dark_theme(self.style)
+                utils.log_info("Tema alterado para: Escuro")
+
+            # --- ADICIONE ESTA LINHA ---
+            # Atualiza os widgets que não são ttk
+            self.relatorios_view.update_theme(self.theme_is_light)
+
+        except tk.TclError as e:
+            utils.log_erro("Falha ao aplicar tema.", e)
+            messagebox.showwarning("Erro de Tema", 
+                                "Não foi possível aplicar o tema. Verifique se 'clam' está disponível.")
 
     # =================================================================
     # --- PONTO DE ENTRADA DA APLICAÇÃO ---

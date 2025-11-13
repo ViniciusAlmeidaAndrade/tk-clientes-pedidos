@@ -1,8 +1,7 @@
-# Em views/relatorios_view.py
-
 import tkinter as tk
 from tkinter import ttk
 from tkcalendar import DateEntry  # Importa o seletor de data
+from styles import get_calendar_light_style, get_calendar_dark_style
 
 
 class RelatoriosView(ttk.Frame):
@@ -40,18 +39,21 @@ class RelatoriosView(ttk.Frame):
         """Cria os widgets de filtro (Datas e Cliente)."""
         parent.columnconfigure((1, 3, 5), weight=1)
 
+        # Pega o dicionário de estilo claro
+        style_claro = get_calendar_light_style()
+
         # Data Inicial
         ttk.Label(parent, text="Data Inicial:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
-        self.entry_data_inicio = DateEntry(parent, width=12, background='darkblue',
-                                           foreground='white', borderwidth=2,
-                                           date_pattern='dd/MM/yyyy', locale='pt_BR')
+        self.entry_data_inicio = DateEntry(parent, width=12,
+                                            date_pattern='dd/MM/yyyy', locale='pt_BR',
+                                            **style_claro) 
         self.entry_data_inicio.grid(row=0, column=1, padx=5, sticky=tk.EW)
 
         # Data Final
         ttk.Label(parent, text="Data Final:").grid(row=0, column=2, padx=(10, 5), sticky=tk.W)
-        self.entry_data_fim = DateEntry(parent, width=12, background='darkblue',
-                                        foreground='white', borderwidth=2,
-                                        date_pattern='dd/MM/yyyy', locale='pt_BR')
+        self.entry_data_fim = DateEntry(parent, width=12,
+                                        date_pattern='dd/MM/yyyy', locale='pt_BR',
+                                        **style_claro)
         self.entry_data_fim.grid(row=0, column=3, padx=5, sticky=tk.EW)
 
         # Cliente (Combobox)
@@ -92,11 +94,11 @@ class RelatoriosView(ttk.Frame):
         ttk.Label(parent, text="Exportar resultados para:").pack(side=tk.LEFT, padx=(0, 10))
 
         self.btn_export_csv = ttk.Button(parent, text="Exportar CSV",
-                                         command=self.on_exportar_csv_callback)
+                                        command=self.on_exportar_csv_callback)
         self.btn_export_csv.pack(side=tk.LEFT, padx=5)
 
         self.btn_export_pdf = ttk.Button(parent, text="Exportar PDF",
-                                         command=self.on_exportar_pdf_callback)
+                                        command=self.on_exportar_pdf_callback)
         self.btn_export_pdf.pack(side=tk.LEFT, padx=5)
 
     def set_clientes_combobox(self, clientes: list):
@@ -138,3 +140,14 @@ class RelatoriosView(ttk.Frame):
             total_formatado = f"{item[4]:.2f}"
             dados_view = (item[0], item[1], item[2], item[3], total_formatado)
             self.pedidos_tree.insert("", tk.END, values=dados_view)
+
+    def update_theme(self, is_light):
+        """Atualiza manualmente o estilo dos widgets DateEntry."""
+        if is_light:
+            style_dict = get_calendar_light_style()
+        else:
+            style_dict = get_calendar_dark_style()
+
+        # Aplica o novo dicionário de estilo aos widgets
+        self.entry_data_inicio.configure(**style_dict)
+        self.entry_data_fim.configure(**style_dict)
