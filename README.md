@@ -35,8 +35,6 @@ tk-clientes-pedidos/
 │   ├──__init__.py
 |   ├── analysis.py         # Lógica de integração com API (Gemini)
 │   └── database.py         # Funções de consulta ao banco (SELECTs)
-├── logs/                   # Logs de auditoria
-│   └── app.log
 ├── views/                  # Pacote com os módulos da UI (Telas)
 │   ├── __init__.py
 │   ├── dashboard_view.py
